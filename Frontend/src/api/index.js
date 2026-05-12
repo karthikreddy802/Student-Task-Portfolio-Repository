@@ -30,11 +30,28 @@ export const submissionApi = {
   getAll: () => api.get('/submissions/'),
   create: (data) => {
     const formData = new FormData();
-    Object.keys(data).forEach(key => formData.append(key, data[key]));
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        if (typeof data[key] === 'object' && !(data[key] instanceof File)) {
+          formData.append(key, JSON.stringify(data[key]));
+        } else {
+          formData.append(key, data[key]);
+        }
+      }
+    });
     return api.post('/submissions/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
+  update: (id, data) => api.patch(`/submissions/${id}/`, data),
+  delete: (id) => api.delete(`/submissions/${id}/`),
+};
+export const portfolioApi = {
+  generate: (data) => api.post('/generate-portfolio/', data),
+};
+export const notificationApi = {
+  getAll: (userId) => api.get(`/notifications/${userId ? `?user_id=${userId}` : ''}`),
+  markAsRead: (id) => api.patch(`/notifications/${id}/`, { is_read: true }),
 };
 
 export default api;

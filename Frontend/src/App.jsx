@@ -13,6 +13,8 @@ import Submissions from './components/Submissions';
 import Portfolio from './components/Portfolio';
 import TeacherPanel from './components/TeacherPanel';
 import AdminPanel from './components/AdminPanel';
+import PortfolioPreview from './components/PortfolioPreview';
+import Profile from './components/Profile';
 
 function App() {
   return (
@@ -76,6 +78,18 @@ function App() {
           } 
         />
 
+        <Route 
+          path="/profile" 
+          element={
+            <Layout>
+              <Profile />
+            </Layout>
+          } 
+        />
+        <Route 
+          path="/portfolio-preview" 
+          element={<PortfolioPreview />} 
+        />
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

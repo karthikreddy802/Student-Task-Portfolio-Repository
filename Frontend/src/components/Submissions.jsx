@@ -17,6 +17,8 @@ const Submissions = () => {
   // Form State
   const [selectedTask, setSelectedTask] = useState('');
   const [file, setFile] = useState(null);
+  const [description, setDescription] = useState('');
+  const [tags, setTags] = useState('');
   const [comment, setComment] = useState('');
 
   useEffect(() => {
@@ -49,8 +51,10 @@ const Submissions = () => {
     const formData = {
       task: selectedTask,
       file: file,
+      description: description,
+      tags: tags,
       comment: comment,
-      student: 1, // Mock student ID for now
+      student: localStorage.getItem('userId') || 1, // Get current user ID
     };
 
     try {
@@ -63,18 +67,43 @@ const Submissions = () => {
         }
       );
       setIsModalOpen(false);
+      setDescription('');
+      setTags('');
+      setComment('');
       fetchData(); // Refresh list
     } catch (err) {
       console.error(err);
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this submission?')) return;
+    
+    try {
+      await submissionApi.delete(id);
+      toast.success('Submission deleted');
+      fetchData();
+    } catch (err) {
+      toast.error('Failed to delete submission');
+    }
+  };
+
+  const handleDownload = (fileUrl) => {
+    if (!fileUrl) return;
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    link.setAttribute('download', fileUrl.split('/').pop());
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Your Submissions</h1>
-          <p className="text-slate-400">Manage and track your task submissions.</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">Your Submissions</h1>
+          <p className="text-slate-400 mt-1">Manage and track your task submissions.</p>
         </div>
         <motion.button 
           whileHover={{ scale: 1.05 }}
@@ -92,7 +121,7 @@ const Submissions = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
           <input 
             type="text" 
-            placeholder="Search submissions..."
+            placeholder="Search submissions by task or status..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-10 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
@@ -115,7 +144,12 @@ const Submissions = () => {
             </thead>
             <tbody className="divide-y divide-white/10">
               <AnimatePresence>
-                {submissions.map((sub) => (
+                {submissions
+                  .filter(sub => 
+                    sub.task_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    sub.status?.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((sub) => (
                   <motion.tr 
                     key={sub.id}
                     initial={{ opacity: 0 }}
@@ -128,34 +162,62 @@ const Submissions = () => {
                         <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center text-indigo-400">
                           <FileText className="w-6 h-6" />
                         </div>
-                        <span className="text-white font-medium">{sub.task_title || 'Unnamed Task'}</span>
+                        <div>
+                          <span className="text-white font-medium block">{sub.task_title || 'Unnamed Task'}</span>
+                          {sub.tags && (
+                            <div className="flex gap-1 mt-1">
+                              {sub.tags.split(',').map((tag, i) => (
+                                <span key={i} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">
+                                  {tag.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-4 text-slate-400">{new Date(sub.submitted_at).toLocaleDateString()}</td>
                     <td className="p-4">
                       <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded text-xs uppercase font-bold">
-                        {sub.file.split('.').pop()}
+                        {sub.file?.split('.').pop() || 'NA'}
                       </span>
                     </td>
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                        sub.grade ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                        sub.status === 'Graded' ? 'bg-emerald-500/10 text-emerald-400' : 
+                        sub.status === 'Returned' ? 'bg-rose-500/10 text-rose-400' :
+                        'bg-amber-500/10 text-amber-400'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${
-                          sub.grade ? 'bg-emerald-400' : 'bg-amber-400'
+                          sub.status === 'Graded' ? 'bg-emerald-400' : 
+                          sub.status === 'Returned' ? 'bg-rose-400' :
+                          'bg-amber-400'
                         }`} />
-                        {sub.grade ? `Graded: ${sub.grade}` : 'Pending'}
+                        {sub.status || 'Submitted'}
+                        {sub.grade && ` (${sub.grade})`}
                       </span>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all">
+                        <button 
+                          onClick={() => handleDownload(sub.file)}
+                          className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all" 
+                          title="Download"
+                        >
                           <Download className="w-4 h-4" />
                         </button>
-                        <button className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all">
+                        <button 
+                          onClick={() => window.open(sub.file, '_blank')}
+                          className="p-2 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-all" 
+                          title="View Details"
+                        >
                           <ExternalLink className="w-4 h-4" />
                         </button>
-                        <button className="p-2 hover:bg-rose-500/20 rounded-lg text-slate-400 hover:text-rose-400 transition-all">
+                        <button 
+                          onClick={() => handleDelete(sub.id)}
+                          className="p-2 hover:bg-rose-500/20 rounded-lg text-slate-400 hover:text-rose-400 transition-all" 
+                          title="Delete"
+                        >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -168,13 +230,16 @@ const Submissions = () => {
         </div>
         
         {/* Empty State Mockup */}
-        {submissions.length === 0 && (
+        {(submissions.length === 0 || submissions.filter(sub => 
+                    sub.task_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    sub.status?.toLowerCase().includes(searchTerm.toLowerCase())
+                  ).length === 0) && (
           <div className="py-20 flex flex-col items-center text-center">
             <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-4">
               <Upload className="text-slate-500 w-10 h-10" />
             </div>
             <h3 className="text-white font-semibold text-lg">No submissions found</h3>
-            <p className="text-slate-500 mt-1">Start by uploading your first task.</p>
+            <p className="text-slate-500 mt-1">Start by uploading your first task or refine your search.</p>
           </div>
         )}
       </div>
@@ -187,7 +252,7 @@ const Submissions = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-slate-900 border border-white/10 rounded-2xl p-8 w-full max-w-lg shadow-2xl relative"
+              className="bg-slate-900 border border-white/10 rounded-2xl p-8 w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -198,7 +263,7 @@ const Submissions = () => {
 
               <h2 className="text-2xl font-bold text-white mb-6">Submit Task</h2>
               
-              <form onSubmit={handleUpload} className="space-y-6">
+              <form onSubmit={handleUpload} className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-slate-400">Select Task</label>
                   <select 
@@ -216,31 +281,54 @@ const Submissions = () => {
                   </select>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-400">Upload File</label>
-                  <div className="relative">
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-400">Upload File</label>
+                    <div className="relative">
+                      <input 
+                        type="file" 
+                        onChange={(e) => setFile(e.target.files[0])}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 transition-all"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-400">Tags (comma separated)</label>
                     <input 
-                      type="file" 
-                      onChange={(e) => setFile(e.target.files[0])}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 transition-all"
-                      required
+                      type="text" 
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      placeholder="e.g. React, UI/UX, Backend"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-400">Comments (Optional)</label>
+                  <label className="text-sm font-medium text-slate-400">Work Description</label>
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-24 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    placeholder="Briefly describe what you did..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-slate-400">Additional Comments (Optional)</label>
                   <textarea 
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-24 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                    placeholder="Add a note to your submission..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    placeholder="Any specific note for the teacher..."
                   />
                 </div>
 
                 <button 
                   type="submit"
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all"
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all mt-4"
                 >
                   Confirm Submission
                 </button>

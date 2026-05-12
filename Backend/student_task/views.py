@@ -1,11 +1,18 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Profile, Task, Submission
-from .serializers import MyTokenObtainPairSerializer, ProfileSerializer, TaskSerializer, SubmissionSerializer
+from django.contrib.auth.models import User
+from .models import Profile, Task, Submission, Notification
+from .serializers import MyTokenObtainPairSerializer, ProfileSerializer, TaskSerializer, SubmissionSerializer, NotificationSerializer
+from .ai_service import generate_portfolio_content
+from django.http import HttpResponse
+
+def api_root(request):
+    return HttpResponse("<h1>Student Task & Portfolio Repository</h1><p>The backend is running. Access the frontend at <a href='http://localhost:5173'>http://localhost:5173</a></p>")
 
 def send_login_email(user):
     subject = 'Login Notification - Student Task Repo'
@@ -53,13 +60,34 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         # For now, we allow passing student ID in request
         serializer.save()
 
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.status == 'Graded':
+            Notification.objects.create(
+                user=instance.student,
+                title="Submission Graded!",
+                message=f"Your submission for '{instance.task.title}' has been graded. Grade: {instance.grade}"
+            )
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all().order_by('-created_at')
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        # In production, return only notifications for the current user
+        user_id = self.request.query_params.get('user_id')
+        if user_id and user_id.isdigit():
+            return self.queryset.filter(user_id=user_id)
+        # If user_id is 'undefined' or missing, return empty queryset to avoid error
+        if user_id:
+            return self.queryset.none()
+        return self.queryset
+
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
     permission_classes = [permissions.AllowAny]
-from rest_framework.views import APIView
-from rest_framework import status
-from django.contrib.auth.models import User
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -83,3 +111,31 @@ class RegisterView(APIView):
         send_welcome_email(user)
         
         return Response({'message': 'User registered successfully'}, status=status.HTTP_201_CREATED)
+
+class GeneratePortfolioView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        submission_ids = request.data.get('submission_ids', [])
+        student_name = request.data.get('student_name', 'Student')
+        
+        if not submission_ids:
+            return Response({'error': 'No submissions selected'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        submissions = Submission.objects.filter(id__in=submission_ids)
+        submissions_data = []
+        for s in submissions:
+            submissions_data.append({
+                'id': s.id,
+                'task_title': s.task.title,
+                'description': s.description,
+                'tags': s.tags,
+                'grade': s.grade
+            })
+            
+        result = generate_portfolio_content(student_name, submissions_data)
+        
+        if result:
+            return Response(result, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'AI Generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

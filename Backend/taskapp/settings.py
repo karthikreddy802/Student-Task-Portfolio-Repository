@@ -157,3 +157,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'karthikreddybodapati@gmail.com' # Replace with your email
 EMAIL_HOST_PASSWORD = 'hbud qawz bydx dkxt' # Replace with your app password
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# Ollama AI Configuration
+OLLAMA_URL = 'http://localhost:11434/api/generate'
+OLLAMA_MODEL = 'gemma:2b' # Or your preferred local model

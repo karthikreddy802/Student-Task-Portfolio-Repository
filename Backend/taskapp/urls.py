@@ -19,9 +19,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenRefreshView
-from student_task.views import MyTokenObtainPairView
+from student_task.views import MyTokenObtainPairView, api_root
 
 urlpatterns = [
+    path('', api_root, name='root'),
     path('admin/', admin.site.urls),
     path('api/', include('student_task.urls')),
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

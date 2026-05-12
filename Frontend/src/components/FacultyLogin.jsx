@@ -23,6 +23,8 @@ const FacultyLogin = () => {
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
       localStorage.setItem('userRole', role);
+      localStorage.setItem('username', res.data.username);
+      localStorage.setItem('userId', res.data.user_id);
       
       if (role !== 'Teacher' && role !== 'Admin') {
          toast.error('This portal is for Faculty only.');
@@ -51,7 +53,7 @@ const FacultyLogin = () => {
               <span className="text-blue-400">Hub</span>
             </h1>
             <p className="text-slate-400 text-lg font-light">
-              Smart Academic Repository
+              Student Task & Portfolio Repository
             </p>
           </div>
           <div className="absolute -top-20 -left-20 w-[450px] h-[450px] bg-gradient-to-br from-blue-500/20 to-indigo-900/10 rounded-full blur-3xl -z-0" />

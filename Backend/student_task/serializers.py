@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Profile, Task, Submission
+from .models import Profile, Task, Submission, Notification
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -14,6 +14,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['role'] = self.user.profile.role if hasattr(self.user, 'profile') else 'Student'
         data['username'] = self.user.username
+        data['user_id'] = self.user.id
         return data
 
 class UserSerializer(serializers.ModelSerializer):
@@ -21,12 +22,25 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'role']
+        read_only_fields = ['username', 'role']
 
 class ProfileSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
+    user = UserSerializer() # Remove read_only=True
+
     class Meta:
         model = Profile
         fields = '__all__'
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            user = instance.user
+            user.email = user_data.get('email', user.email)
+            user.first_name = user_data.get('first_name', user.first_name)
+            user.last_name = user_data.get('last_name', user.last_name)
+            user.save()
+        
+        return super().update(instance, validated_data)
 
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,4 +53,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Submission
+        fields = '__all__'
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
         fields = '__all__'

@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Send, UserCircle, 
   GraduationCap, Settings, LogOut, Menu, X 
 } from 'lucide-react';
+import Navbar from './Navbar';
 
 const Layout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(true);
@@ -55,12 +56,16 @@ const Layout = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <Link to="/">
-            <div className="flex items-center gap-3 px-3 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-all group">
-              <LogOut className="w-5 h-5 shrink-0" />
-              {isOpen && <span className="font-medium">Logout</span>}
-            </div>
-          </Link>
+          <div 
+            onClick={() => {
+              localStorage.clear();
+              window.location.href = '/';
+            }}
+            className="flex items-center gap-3 px-3 py-3 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-all group cursor-pointer"
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {isOpen && <span className="font-medium">Logout</span>}
+          </div>
         </div>
         
         <button 
@@ -72,8 +77,9 @@ const Layout = ({ children }) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow overflow-y-auto max-h-screen">
-        <div className="max-w-7xl mx-auto p-4 md:p-8">
+      <main className="flex-grow overflow-y-auto max-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-grow max-w-7xl w-full mx-auto p-4 md:p-8">
           {children}
         </div>
       </main>

@@ -23,6 +23,8 @@ const AdminLogin = () => {
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
       localStorage.setItem('userRole', role);
+      localStorage.setItem('username', res.data.username);
+      localStorage.setItem('userId', res.data.user_id);
       
       if (role !== 'Admin') {
          toast.error('Unauthorized access. Admin only.');
@@ -51,7 +53,7 @@ const AdminLogin = () => {
               <span className="text-purple-500">Console</span>
             </h1>
             <p className="text-slate-400 text-lg font-light">
-              System Administration Hub
+              Student Task & Portfolio Repository
             </p>
           </div>
           <div className="absolute -top-20 -left-20 w-[450px] h-[450px] bg-gradient-to-br from-purple-500/20 to-rose-900/10 rounded-full blur-3xl -z-0" />

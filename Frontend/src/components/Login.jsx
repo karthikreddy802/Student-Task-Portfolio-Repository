@@ -25,6 +25,8 @@ const Login = () => {
       localStorage.setItem('accessToken', access);
       localStorage.setItem('refreshToken', refresh);
       localStorage.setItem('userRole', role);
+      localStorage.setItem('username', res.data.username);
+      localStorage.setItem('userId', res.data.user_id);
       
       toast.success(`Welcome back, Student!`);
       navigate('/dashboard');
@@ -44,11 +46,11 @@ const Login = () => {
         <div className="hidden lg:block relative">
           <div className="relative z-10 space-y-2">
             <h1 className="text-6xl font-bold text-white tracking-tight leading-tight">
-              Smart Academic <br />
-              <span className="text-[#00df82]">Portfolio</span>
+              Student Task <br />
+              <span className="text-[#00df82]">& Portfolio</span>
             </h1>
             <p className="text-slate-400 text-lg font-light">
-              & Repository Platform
+              Repository Platform
             </p>
           </div>
           

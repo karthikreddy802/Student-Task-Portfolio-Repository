@@ -39,7 +39,7 @@ const Register = () => {
               <span className="text-[#00df82]">Academic Network</span>
             </h1>
             <p className="text-slate-400 text-lg font-light">
-              Create your portfolio and start your journey today.
+              Student Task & Portfolio Repository
             </p>
           </div>
           <div className="absolute -top-20 -left-20 w-[450px] h-[450px] bg-gradient-to-br from-[#00df82]/20 to-teal-900/10 rounded-full blur-3xl -z-0" />
