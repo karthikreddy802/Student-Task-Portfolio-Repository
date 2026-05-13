@@ -23,13 +23,15 @@ class Task(models.Model):
         ('Overdue', 'Overdue'),
     ]
     title = models.CharField(max_length=255)
+    subject = models.CharField(max_length=100, default='General')
     description = models.TextField()
     due_date = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.subject})"
 
 class Submission(models.Model):
     STATUS_CHOICES = [
@@ -61,3 +63,15 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+
+class Portfolio(models.Model):
+    student = models.OneToOneField(User, on_delete=models.CASCADE, related_name='portfolio')
+    bio = models.TextField(blank=True)
+    title = models.CharField(max_length=255, default='Full Stack Enthusiast')
+    data = models.JSONField(default=dict) # To store projects and AI generated content
+    is_published = models.BooleanField(default=False)
+    avatar = models.ImageField(upload_to='portfolio_avatars/', blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Portfolio - {self.student.username}"

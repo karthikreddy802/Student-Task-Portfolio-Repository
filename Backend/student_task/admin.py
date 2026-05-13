@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Profile, Task, Submission
+from .models import Profile, Task, Submission, Portfolio
+
+@admin.register(Portfolio)
+class PortfolioAdmin(admin.ModelAdmin):
+    list_display = ('student', 'title', 'is_published', 'updated_at')
+    list_filter = ('is_published',)
+    search_fields = ('student__username', 'title')
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):

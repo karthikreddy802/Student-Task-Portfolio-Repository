@@ -7,7 +7,15 @@ import {
 import toast from 'react-hot-toast';
 import { taskApi, submissionApi } from '../api';
 
+import { useLocation } from 'react-router-dom';
+
 const Submissions = () => {
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const currentView = queryParams.get('view') || 'history';
+
+  console.log('Submissions View:', currentView, 'Path:', location.pathname + location.search);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [submissions, setSubmissions] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -23,7 +31,7 @@ const Submissions = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentView]);
 
   const fetchData = async () => {
     try {
@@ -102,8 +110,16 @@ const Submissions = () => {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Your Submissions</h1>
-          <p className="text-slate-400 mt-1">Manage and track your task submissions.</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight">
+            {currentView === 'grades' ? 'My Grades' : 
+             currentView === 'feedback' ? 'Academic Feedback' : 
+             'Submission History'}
+          </h1>
+          <p className="text-slate-400 mt-1">
+            {currentView === 'grades' ? 'Review your academic achievements and scores.' : 
+             currentView === 'feedback' ? 'Read detailed performance reviews from your teachers.' : 
+             'Manage and track your task submissions.'}
+          </p>
         </div>
         <motion.button 
           whileHover={{ scale: 1.05 }}
@@ -145,10 +161,15 @@ const Submissions = () => {
             <tbody className="divide-y divide-white/10">
               <AnimatePresence>
                 {submissions
-                  .filter(sub => 
-                    sub.task_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    sub.status?.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
+                  .filter(sub => {
+                    const matchesSearch = 
+                      sub.task_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                      sub.status?.toLowerCase().includes(searchTerm.toLowerCase());
+                    
+                    if (currentView === 'grades') return matchesSearch && sub.status === 'Graded';
+                    if (currentView === 'feedback') return matchesSearch && sub.feedback;
+                    return matchesSearch;
+                  })
                   .map((sub) => (
                   <motion.tr 
                     key={sub.id}

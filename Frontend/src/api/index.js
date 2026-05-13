@@ -24,6 +24,7 @@ export const taskApi = {
   getAll: () => api.get('/tasks/'),
   getById: (id) => api.get(`/tasks/${id}/`),
   create: (data) => api.post('/tasks/', data),
+  suggestDescription: (data) => api.post('/suggest-task-description/', data),
 };
 
 export const submissionApi = {
@@ -48,6 +49,23 @@ export const submissionApi = {
 };
 export const portfolioApi = {
   generate: (data) => api.post('/generate-portfolio/', data),
+  getMine: (userId) => api.get(`/portfolios/?user_id=${userId}`),
+  update: (id, data) => {
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+      if (data[key] !== null && data[key] !== undefined) {
+        if (typeof data[key] === 'object' && !(data[key] instanceof File)) {
+          formData.append(key, JSON.stringify(data[key]));
+        } else {
+          formData.append(key, data[key]);
+        }
+      }
+    });
+    return api.patch(`/portfolios/${id}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  getPublic: (username) => api.get(`/public-portfolio/${username}/`),
 };
 export const notificationApi = {
   getAll: (userId) => api.get(`/notifications/${userId ? `?user_id=${userId}` : ''}`),

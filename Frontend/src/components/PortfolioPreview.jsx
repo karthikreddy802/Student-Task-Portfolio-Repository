@@ -2,34 +2,73 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Globe, Mail, Terminal, UserCircle,
-  ExternalLink, Award, Sparkles, BookOpen
+  ExternalLink, Award, Sparkles, BookOpen, Loader2
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { portfolioApi } from '../api';
+import toast from 'react-hot-toast';
 
 const PortfolioPreview = () => {
-  // This would normally fetch data from an API based on a public ID
-  // For now, we'll use some mock data to show the "Clean, Formatted" view
-  const savedData = localStorage.getItem('publishedPortfolio');
-  const data = savedData ? JSON.parse(savedData) : {
-    name: "Felix Academic",
-    title: "Senior Cybersecurity Student",
-    bio: "Focused on network security and automated vulnerability assessment. This portfolio showcases my best academic achievements and technical projects.",
-    projects: [
-      {
-        title: "Network Intrusion Detection",
-        description: "Implemented a real-time NIDS using Snort and custom Python scripts for traffic analysis.",
-        tags: ["Python", "Networking", "Security"],
-        grade: "A+",
-        link: "#"
-      },
-      {
-        title: "Encrypted File System",
-        description: "Developed a secure file storage system with AES-256 encryption and multi-factor authentication.",
-        tags: ["C++", "Cryptography", "Linux"],
-        grade: "A",
-        link: "#"
+  const { username } = useParams();
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      if (username) {
+        try {
+          const res = await portfolioApi.getPublic(username);
+          setData({
+            name: res.data.student_name,
+            title: res.data.title,
+            bio: res.data.bio,
+            avatar: res.data.effective_avatar,
+            projects: res.data.data.projects || []
+          });
+        } catch (err) {
+          console.error(err);
+          toast.error('Could not find this portfolio');
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        // Fallback to localStorage if no username in URL (for local preview)
+        const savedData = localStorage.getItem('publishedPortfolio');
+        if (savedData) {
+          setData(JSON.parse(savedData));
+        }
+        setLoading(false);
       }
-    ]
-  };
+    };
+    fetchData();
+  }, [username]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center">
+        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+        <p className="text-slate-400 font-medium">Loading Portfolio...</p>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
+          <BookOpen className="w-10 h-10 text-slate-500" />
+        </div>
+        <h1 className="text-3xl font-bold text-white mb-2">Portfolio Not Found</h1>
+        <p className="text-slate-400 max-w-md">The portfolio you are looking for might not be published yet or the username is incorrect.</p>
+        <button 
+          onClick={() => window.location.href = '/'}
+          className="mt-8 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold"
+        >
+          Back to Home
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-300 font-sans selection:bg-indigo-500/30">
@@ -48,9 +87,9 @@ const PortfolioPreview = () => {
             className="w-32 h-32 mx-auto rounded-3xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1 shadow-2xl"
           >
             <img 
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" 
+              src={data.avatar ? (data.avatar.startsWith('http') ? data.avatar : `http://localhost:8000${data.avatar}`) : "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} 
               alt="Avatar" 
-              className="w-full h-full rounded-[22px] bg-slate-900"
+              className="w-full h-full rounded-[22px] bg-slate-900 object-cover"
             />
           </motion.div>
           
@@ -135,7 +174,12 @@ const PortfolioPreview = () => {
                   ))}
                 </div>
 
-                <a href={project.file || project.link || '#'} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white font-bold group-hover:gap-3 transition-all">
+                <a 
+                  href={project.file ? `http://localhost:8000${project.file}` : (project.link || '#')} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="inline-flex items-center gap-2 text-white font-bold group-hover:gap-3 transition-all"
+                >
                   View Full Case Study <ExternalLink className="w-4 h-4 text-indigo-500" />
                 </a>
               </motion.div>

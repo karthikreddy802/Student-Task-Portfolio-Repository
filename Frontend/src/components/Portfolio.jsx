@@ -17,10 +17,36 @@ const Portfolio = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedData, setGeneratedData] = useState(null);
+  const [portfolioId, setPortfolioId] = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [profileAvatar, setProfileAvatar] = useState(null);
+
+  const getFullImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `http://localhost:8000${path}`;
+  };
 
   useEffect(() => {
     fetchGradedSubmissions();
+    fetchProfile();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        const res = await portfolioApi.getMine(userId);
+        if (res.data.length > 0) {
+          setProfileAvatar(res.data[0].effective_avatar);
+          setPortfolioId(res.data[0].id); // Store existing ID
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch profile avatar', err);
+    }
+  };
 
   const fetchGradedSubmissions = async () => {
     try {
@@ -51,15 +77,27 @@ const Portfolio = () => {
     try {
       const res = await portfolioApi.generate({
         submission_ids: selectedIds,
-        student_name: localStorage.getItem('username') || 'Student Developer'
+        student_name: localStorage.getItem('username') || 'Student Developer',
+        user_id: localStorage.getItem('userId')
       });
       
       const aiData = res.data;
+      const newPortfolioId = aiData.portfolio_id;
+      
+      if (newPortfolioId) {
+        setPortfolioId(newPortfolioId);
+      } else {
+        // Try to fetch it if the generation didn't return it for some reason
+        await fetchProfile();
+      }
+
+      if (aiData.avatar) setProfileAvatar(aiData.avatar);
       
       setGeneratedData({
         name: localStorage.getItem('username') || 'Student Developer',
         title: 'Full Stack Enthusiast',
         bio: aiData.bio,
+        avatar: aiData.avatar, // Add this if the AI/Backend returns it
         projects: submissions.filter(s => selectedIds.includes(s.id)).map(s => {
           const aiProject = aiData.projects?.find(p => p.id === s.id) || {};
           return {
@@ -217,8 +255,32 @@ const Portfolio = () => {
             {/* Header Preview */}
             <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-white/10 p-8 sm:p-12">
               <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
-                <div className="w-32 h-32 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1">
-                  <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar" className="w-full h-full rounded-2xl bg-slate-900" />
+                <div className="relative group/avatar w-32 h-32">
+                  <div className="w-full h-full rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-1">
+                    <img 
+                      src={avatarPreview || getFullImageUrl(profileAvatar) || "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"} 
+                      alt="Avatar" 
+                      className="w-full h-full rounded-2xl bg-slate-900 object-cover" 
+                    />
+                  </div>
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity cursor-pointer rounded-2xl">
+                    <div className="text-center">
+                      <ImageIcon className="w-6 h-6 text-white mx-auto mb-1" />
+                      <span className="text-[10px] text-white font-bold uppercase">Change</span>
+                    </div>
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setAvatarFile(file);
+                          setAvatarPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                    />
+                  </label>
                 </div>
                 <div className="text-center md:text-left space-y-4">
                   <div>
@@ -264,13 +326,52 @@ const Portfolio = () => {
               </button>
               <button 
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-4 rounded-2xl font-bold transition-all shadow-xl shadow-emerald-600/20"
-                onClick={() => {
-                  localStorage.setItem('publishedPortfolio', JSON.stringify(generatedData));
-                  toast.success('Public link generated!');
-                  setTimeout(() => navigate('/portfolio-preview'), 1500);
+                onClick={async () => {
+                  let currentId = portfolioId;
+                  
+                  // Final attempt to recover ID if missing
+                  if (!currentId) {
+                    const userId = localStorage.getItem('userId');
+                    if (userId) {
+                      const res = await portfolioApi.getMine(userId);
+                      if (res.data.length > 0) {
+                        currentId = res.data[0].id;
+                        setPortfolioId(currentId);
+                      }
+                    }
+                  }
+
+                  if (currentId) {
+                    try {
+                      const updateData = { is_published: true };
+                      if (avatarFile) {
+                        updateData.avatar = avatarFile;
+                      }
+                      await toast.promise(
+                        portfolioApi.update(currentId, updateData),
+                        {
+                          loading: 'Publishing your professional portfolio...',
+                          success: 'Your portfolio has been created successfully! 🚀',
+                          error: 'Failed to publish. Please try again.',
+                        }
+                      );
+                      const username = localStorage.getItem('username');
+                      const shareLink = `${window.location.origin}/portfolio/${username}`;
+                      navigator.clipboard.writeText(shareLink);
+                      toast.success('Your public portfolio is now LIVE!', { 
+                        icon: '✨',
+                        duration: 4000 
+                      });
+                      setTimeout(() => navigate(`/portfolio/${username}`), 1500);
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  } else {
+                    toast.error('Please generate your portfolio content first!');
+                  }
                 }}
               >
-                <Share2 className="w-5 h-5" /> Publish & Share Portfolio
+                <Share2 className="w-5 h-5" /> Go Live & Share Portfolio
               </button>
             </div>
           </motion.div>

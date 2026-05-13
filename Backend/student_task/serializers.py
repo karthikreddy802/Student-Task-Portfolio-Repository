@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Profile, Task, Submission, Notification
+from .models import Profile, Task, Submission, Notification, Portfolio
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -11,6 +11,17 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
 
     def validate(self, attrs):
+        username = attrs.get("username")
+        password = attrs.get("password")
+
+        # Check if username is actually an email
+        if "@" in username:
+            try:
+                user = User.objects.get(email=username)
+                attrs["username"] = user.username
+            except User.DoesNotExist:
+                pass
+
         data = super().validate(attrs)
         data['role'] = self.user.profile.role if hasattr(self.user, 'profile') else 'Student'
         data['username'] = self.user.username
@@ -50,6 +61,7 @@ class TaskSerializer(serializers.ModelSerializer):
 class SubmissionSerializer(serializers.ModelSerializer):
     student_name = serializers.ReadOnlyField(source='student.username')
     task_title = serializers.ReadOnlyField(source='task.title')
+    task_subject = serializers.ReadOnlyField(source='task.subject')
     
     class Meta:
         model = Submission
@@ -59,3 +71,18 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = '__all__'
+
+class PortfolioSerializer(serializers.ModelSerializer):
+    student_name = serializers.ReadOnlyField(source='student.username')
+    effective_avatar = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Portfolio
+        fields = '__all__'
+
+    def get_effective_avatar(self, obj):
+        if obj.avatar:
+            return obj.avatar.url
+        if hasattr(obj.student, 'profile') and obj.student.profile.avatar:
+            return obj.student.profile.avatar.url
+        return None

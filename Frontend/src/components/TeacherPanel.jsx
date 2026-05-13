@@ -4,18 +4,24 @@ import {
   Users, ClipboardList, MessageSquare, 
   Search, CheckCircle, Star, Clock, 
   Filter, ChevronDown, Download, ExternalLink,
-  Award, MessageCircle, X
+  Award, MessageCircle, X, Sparkles, Wand2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { submissionApi } from '../api';
+import { submissionApi, taskApi } from '../api';
 
 const TeacherPanel = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const userRole = localStorage.getItem('userRole');
+  const isAdmin = userRole === 'Admin';
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [selectedSub, setSelectedSub] = useState(null);
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [filterSubject, setFilterSubject] = useState('All');
+  const [filterDate, setFilterDate] = useState('');
 
   // Grading Form State
   const [grade, setGrade] = useState('');
@@ -24,6 +30,14 @@ const TeacherPanel = () => {
     accuracy: 5,
     completeness: 5,
     quality: 5
+  });
+  // Task Creation State
+  const [newTask, setNewTask] = useState({
+    title: '',
+    subject: '',
+    description: '',
+    due_date: '',
+    status: 'Pending'
   });
 
   useEffect(() => {
@@ -71,13 +85,59 @@ const TeacherPanel = () => {
     }
   };
 
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      await toast.promise(
+        taskApi.create({
+          ...newTask,
+          teacher: localStorage.getItem('userId'),
+          due_date: new Date(newTask.due_date).toISOString()
+        }),
+        {
+          loading: 'Assigning task...',
+          success: 'Task assigned successfully! 📝',
+          error: 'Failed to assign task.'
+        }
+      );
+      setIsTaskModalOpen(false);
+      setNewTask({ title: '', subject: '', description: '', due_date: '', status: 'Pending' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSuggestDescription = async () => {
+    if (!newTask.title || !newTask.subject) {
+      toast.error('Please enter a title and subject first');
+      return;
+    }
+    setIsSuggesting(true);
+    try {
+      const res = await taskApi.suggestDescription({
+        title: newTask.title,
+        subject: newTask.subject
+      });
+      setNewTask({ ...newTask, description: res.data.description });
+      toast.success('Description suggested by AI! ✨');
+    } catch (err) {
+      toast.error('AI suggestion failed');
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch = 
       sub.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       sub.task_title?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || sub.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesSubject = filterSubject === 'All' || sub.task_subject === filterSubject;
+    const matchesDate = !filterDate || new Date(sub.submitted_at).toLocaleDateString() === new Date(filterDate).toLocaleDateString();
+    return matchesSearch && matchesStatus && matchesSubject && matchesDate;
   });
+
+  const subjects = [...new Set(submissions.map(s => s.task_subject))];
 
   return (
     <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
@@ -86,6 +146,14 @@ const TeacherPanel = () => {
           <h1 className="text-3xl font-bold text-white tracking-tight">Evaluation Dashboard</h1>
           <p className="text-slate-400 mt-1">Review student submissions and provide academic feedback.</p>
         </div>
+        {!isAdmin && (
+          <button 
+            onClick={() => setIsTaskModalOpen(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20"
+          >
+            <ClipboardList className="w-5 h-5" /> Assign New Task
+          </button>
+        )}
       </header>
 
       {/* Stats Overview */}
@@ -120,8 +188,24 @@ const TeacherPanel = () => {
               className="w-full bg-slate-900/50 border border-slate-700 rounded-xl py-2 px-9 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="text-slate-400 w-4 h-4" />
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="text-slate-400 w-4 h-4" />
+              <select 
+                value={filterSubject}
+                onChange={(e) => setFilterSubject(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              >
+                <option value="All">All Subjects</option>
+                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <input 
+              type="date" 
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="bg-slate-900 border border-slate-700 rounded-xl py-2 px-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            />
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -140,6 +224,7 @@ const TeacherPanel = () => {
             <thead>
               <tr className="bg-white/5 border-b border-white/10">
                 <th className="p-4 text-slate-300 font-semibold text-sm">Student</th>
+                <th className="p-4 text-slate-300 font-semibold text-sm">Subject</th>
                 <th className="p-4 text-slate-300 font-semibold text-sm">Task</th>
                 <th className="p-4 text-slate-300 font-semibold text-sm">Submitted</th>
                 <th className="p-4 text-slate-300 font-semibold text-sm">Status</th>
@@ -161,6 +246,11 @@ const TeacherPanel = () => {
                       <span className="text-white font-medium">{sub.student_name}</span>
                     </div>
                   </td>
+                   <td className="p-4 text-slate-300">
+                    <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-[10px] font-bold">
+                      {sub.task_subject}
+                    </span>
+                  </td>
                   <td className="p-4 text-slate-300">{sub.task_title}</td>
                   <td className="p-4 text-slate-400 text-sm">{new Date(sub.submitted_at).toLocaleDateString()}</td>
                   <td className="p-4">
@@ -178,7 +268,7 @@ const TeacherPanel = () => {
                         onClick={() => handleOpenGradeModal(sub)}
                         className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-indigo-600/20"
                       >
-                        {sub.status === 'Graded' ? 'Review' : 'Grade'}
+                        {isAdmin || sub.status === 'Graded' ? 'Review' : 'Grade'}
                       </button>
                     </div>
                   </td>
@@ -259,9 +349,10 @@ const TeacherPanel = () => {
                           type="range" 
                           min="0" 
                           max="10" 
+                          disabled={isAdmin}
                           value={rubrics[key]}
                           onChange={(e) => setRubrics({...rubrics, [key]: parseInt(e.target.value)})}
-                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                          className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none ${isAdmin ? 'cursor-not-allowed opacity-50' : 'cursor-pointer accent-indigo-600'}`}
                         />
                       </div>
                     ))}
@@ -274,9 +365,10 @@ const TeacherPanel = () => {
                     <input 
                       type="text" 
                       value={grade}
+                      readOnly={isAdmin}
                       onChange={(e) => setGrade(e.target.value)}
-                      placeholder="e.g. A+, 95, Excellent"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      placeholder={isAdmin ? "No grade assigned" : "e.g. A+, 95, Excellent"}
+                      className={`w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 ${isAdmin ? 'opacity-70 focus:ring-transparent' : 'focus:ring-indigo-500/50'}`}
                     />
                   </div>
 
@@ -286,28 +378,123 @@ const TeacherPanel = () => {
                     </h3>
                     <textarea 
                       value={feedback}
+                      readOnly={isAdmin}
                       onChange={(e) => setFeedback(e.target.value)}
-                      placeholder="Provide detailed feedback to the student..."
-                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-32 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                      placeholder={isAdmin ? "No feedback provided" : "Provide detailed feedback to the student..."}
+                      className={`w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white h-32 focus:outline-none focus:ring-2 ${isAdmin ? 'opacity-70 focus:ring-transparent' : 'focus:ring-indigo-500/50'}`}
                     />
                   </div>
 
                   <div className="flex gap-4">
                     <button 
                       onClick={() => setIsGradeModalOpen(false)}
-                      className="flex-grow py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all border border-white/10"
+                      className={`py-3 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all border border-white/10 ${isAdmin ? 'w-full' : 'flex-grow'}`}
                     >
-                      Cancel
+                      {isAdmin ? 'Close Review' : 'Cancel'}
                     </button>
-                    <button 
-                      onClick={submitGrade}
-                      className="flex-grow py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all"
-                    >
-                      Submit Review
-                    </button>
+                    {!isAdmin && (
+                      <button 
+                        onClick={submitGrade}
+                        className="flex-grow py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all"
+                      >
+                        Submit Review
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+       {/* Create Task Modal */}
+      <AnimatePresence>
+        {isTaskModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-white/10 rounded-3xl p-8 w-full max-w-lg shadow-2xl relative"
+            >
+              <button onClick={() => setIsTaskModalOpen(false)} className="absolute top-6 right-6 text-slate-500 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+              
+              <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <ClipboardList className="text-indigo-400" /> Assign New Task
+              </h2>
+              
+              <form onSubmit={handleCreateTask} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-slate-400 text-sm">Task Title</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-slate-400 text-sm">Subject</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={newTask.subject}
+                      onChange={(e) => setNewTask({...newTask, subject: e.target.value})}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-slate-400 text-sm">Due Date</label>
+                  <input 
+                    type="datetime-local" 
+                    required
+                    value={newTask.due_date}
+                    onChange={(e) => setNewTask({...newTask, due_date: e.target.value})}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-slate-400 text-sm">Description</label>
+                    <button 
+                      type="button"
+                      onClick={handleSuggestDescription}
+                      disabled={isSuggesting}
+                      className="flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-50"
+                    >
+                      {isSuggesting ? (
+                        <>Generating...</>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3" /> AI Suggest
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <textarea 
+                    required
+                    rows="4"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                    placeholder="Describe the task objective and requirements..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                
+                <button 
+                  type="submit"
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/20 transition-all mt-4"
+                >
+                  Assign Task to Students
+                </button>
+              </form>
             </motion.div>
           </div>
         )}
@@ -317,4 +504,5 @@ const TeacherPanel = () => {
 };
 
 export default TeacherPanel;
+
 

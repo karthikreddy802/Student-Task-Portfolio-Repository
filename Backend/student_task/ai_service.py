@@ -70,3 +70,52 @@ def generate_portfolio_content(student_name, submissions_data):
                 } for s in submissions_data
             ]
         }
+
+def suggest_task_description(title, subject):
+    """
+    Uses local Ollama AI to generate a detailed task description for teachers.
+    """
+    ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434/api/generate')
+    ollama_model = getattr(settings, 'OLLAMA_MODEL', 'llama3')
+
+    prompt = f"""
+    You are an academic curriculum designer. 
+    A teacher is creating a task titled "{title}" for the subject "{subject}".
+    
+    Generate a professional and detailed task description that includes:
+    1. A clear objective.
+    2. Key requirements/deliverables.
+    3. Technical skills involved.
+    
+    Return the response strictly in JSON format with the following structure:
+    {{
+        "description": "..."
+    }}
+    Do not include any preamble or extra text, just the JSON.
+    """
+
+    try:
+        payload = {
+            "model": ollama_model,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json"
+        }
+        
+        response = requests.post(ollama_url, json=payload, timeout=60)
+        response.raise_for_status()
+        
+        result_data = response.json()
+        content = result_data.get('response', '').strip()
+        
+        if content.startswith('```json'):
+            content = content[7:]
+        if content.endswith('```'):
+            content = content[:-3]
+        
+        return json.loads(content.strip())
+    except Exception as e:
+        print(f"Ollama AI Error: {e}")
+        return {
+            "description": f"Develop a comprehensive project for {title} within the {subject} domain. Focus on technical implementation and best practices."
+        }
