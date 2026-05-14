@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { submissionApi, portfolioApi } from '../api';
 import toast from 'react-hot-toast';
+import SEO from './SEO';
 
 const Portfolio = () => {
   const navigate = useNavigate();
@@ -97,12 +98,17 @@ const Portfolio = () => {
         name: localStorage.getItem('username') || 'Student Developer',
         title: 'Full Stack Enthusiast',
         bio: aiData.bio,
-        avatar: aiData.avatar, // Add this if the AI/Backend returns it
+        skills: aiData.skills || [],
+        recommendation: aiData.recommendation || null,
+        growth_feedback: aiData.growth_feedback || [],
+        avatar: aiData.avatar,
         projects: submissions.filter(s => selectedIds.includes(s.id)).map(s => {
           const aiProject = aiData.projects?.find(p => p.id === s.id) || {};
           return {
+            id: s.id,
             title: s.task_title,
-            description: aiProject.summary || s.description || 'Project implementation.',
+            description: aiProject.resume_description || s.description || 'Project implementation.',
+            highlights: aiProject.highlights || [],
             tags: aiProject.tags || (s.tags || 'Development').split(','),
             grade: s.grade,
             file: s.file
@@ -135,6 +141,10 @@ const Portfolio = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      <SEO 
+        title="Portfolio Wizard" 
+        description="Craft a high-fidelity academic portfolio using AI. Select your best works and generate a professional showcase in seconds."
+      />
       <header>
         <h1 className="text-4xl font-bold text-white tracking-tight flex items-center gap-3">
           <Wand2 className="text-indigo-400 w-8 h-8" /> Portfolio Wizard
@@ -285,32 +295,94 @@ const Portfolio = () => {
                 <div className="text-center md:text-left space-y-4">
                   <div>
                     <h1 className="text-4xl font-bold text-white">{generatedData.name}</h1>
-                    <p className="text-indigo-400 font-medium text-lg">{generatedData.title}</p>
+                    <p className="text-indigo-400 font-medium text-lg">Full Stack Enthusiast</p>
                   </div>
-                  <p className="text-slate-400 max-w-xl">{generatedData.bio}</p>
+                  <p className="text-slate-400 max-w-xl leading-relaxed">{generatedData.bio}</p>
+                  
+                  {/* Skill Extraction */}
+                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                    {generatedData.skills.map((skill, i) => (
+                      <span key={i} className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-indigo-300">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              </div>
+            </div>
+
+            {/* AI Insights: Star Project & Feedback */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 bg-indigo-600/10 border border-indigo-500/20 rounded-3xl p-8 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4">
+                  <Sparkles className="w-8 h-8 text-indigo-500/20 group-hover:text-indigo-500/40 transition-colors" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <Award className="text-amber-400 w-6 h-6" /> Best Work Recommendation
+                </h3>
+                {generatedData.recommendation && (
+                  <div className="space-y-4">
+                    <p className="text-slate-300 italic">"The star of this portfolio is the <strong>{
+                      generatedData.projects.find(p => p.id === generatedData.recommendation.star_project_id)?.title || 'Selected Project'
+                    }</strong>."</p>
+                    <p className="text-slate-400 text-sm leading-relaxed">{generatedData.recommendation.reason}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-emerald-600/10 border border-emerald-500/20 rounded-3xl p-8">
+                <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                  <CheckCircle2 className="text-emerald-400 w-6 h-6" /> Career Growth
+                </h3>
+                <ul className="space-y-3">
+                  {generatedData.growth_feedback.map((item, i) => (
+                    <li key={i} className="flex items-start gap-3 text-sm text-slate-400">
+                      <ArrowRight className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
               </div>
             </div>
 
             {/* Projects Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {generatedData.projects.map((project, i) => (
-                <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-4">
-                  <h3 className="text-xl font-bold text-white">{project.title}</h3>
-                  <p className="text-slate-400 text-sm">{project.description}</p>
-                  <div className="flex flex-wrap gap-2">
+                <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-8 space-y-6 hover:border-indigo-500/30 transition-colors group">
+                  <div className="flex justify-between items-start">
+                    <h3 className="text-2xl font-bold text-white group-hover:text-indigo-400 transition-colors">{project.title}</h3>
+                    <div className="px-3 py-1 bg-indigo-500/20 text-indigo-400 rounded-full text-xs font-bold">
+                      Grade: {project.grade}
+                    </div>
+                  </div>
+                  
+                  <p className="text-slate-400 leading-relaxed italic border-l-2 border-indigo-500/30 pl-4">
+                    {project.description}
+                  </p>
+
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Key Highlights</p>
+                    <ul className="space-y-2">
+                      {project.highlights.map((highlight, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-sm text-slate-400">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          {highlight}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
                     {project.tags.map(tag => (
-                      <span key={tag} className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded-md text-[10px] font-bold uppercase">
-                        {tag.trim()}
+                      <span key={tag} className="px-3 py-1 bg-white/5 text-slate-400 rounded-lg text-[10px] font-bold border border-white/5">
+                        #{tag.trim()}
                       </span>
                     ))}
                   </div>
-                  <div className="pt-4 border-t border-white/5 flex justify-between items-center">
-                    <span className="text-emerald-400 font-bold text-sm flex items-center gap-1">
-                      <Award className="w-4 h-4" /> Grade: {project.grade}
-                    </span>
-                    <a href={project.file} className="text-indigo-400 text-sm hover:underline flex items-center gap-1">
-                      View Project <ExternalLink className="w-3 h-3" />
+
+                  <div className="pt-6 border-t border-white/5 flex justify-end">
+                    <a href={project.file} className="flex items-center gap-2 text-indigo-400 text-sm font-bold hover:text-indigo-300 transition-colors">
+                      Explore Artifact <ExternalLink className="w-4 h-4" />
                     </a>
                   </div>
                 </div>

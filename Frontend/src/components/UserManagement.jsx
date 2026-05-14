@@ -103,7 +103,7 @@ const UserManagement = () => {
   const filteredUsers = users.filter(u => 
     (u.username?.toLowerCase().includes(searchTerm.toLowerCase()) || 
      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     (u.first_name + ' ' + u.last_name).toLowerCase().includes(searchTerm.toLowerCase()))
+     ((u.first_name || '') + ' ' + (u.last_name || '')).toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (

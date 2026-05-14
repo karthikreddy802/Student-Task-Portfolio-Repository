@@ -209,6 +209,40 @@ class PublicPortfolioView(APIView):
         except (User.DoesNotExist, Portfolio.DoesNotExist):
             return Response({'error': 'Portfolio not found or not published'}, status=status.HTTP_404_NOT_FOUND)
 
+class PasswordResetView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('new_password')
+        username = request.data.get('username')
+
+        if not email or not new_password:
+            return Response({'error': 'Email and New Password are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if username:
+                user = User.objects.get(username=username, email=email)
+            else:
+                user = User.objects.get(email=email)
+            
+            user.set_password(new_password)
+            user.save()
+
+            # Mock sending reset email
+            subject = 'Password Reset Successful'
+            message = f'Hi {user.username},\n\nYour password has been successfully reset. If you did not perform this action, please contact support.'
+            try:
+                send_mail(subject, message, settings.EMAIL_HOST_USER, [user.email])
+            except:
+                pass
+
+            return Response({'message': 'Password reset successfully'}, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({'error': 'User with these credentials not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class SuggestTaskDescriptionView(APIView):
     permission_classes = [permissions.AllowAny]
 

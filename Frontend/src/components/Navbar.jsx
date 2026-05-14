@@ -93,6 +93,7 @@ const Navbar = () => {
         <div className="relative">
           <button 
             onClick={() => setIsNotifOpen(!isNotifOpen)}
+            aria-label="View Notifications"
             className="relative p-2 text-slate-400 hover:text-white transition-colors"
           >
             <Bell className="w-5 h-5" />
@@ -151,13 +152,15 @@ const Navbar = () => {
         <div className="relative">
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
+            aria-label="Open Profile Menu"
             className="flex items-center gap-3 p-1.5 rounded-2xl hover:bg-white/5 transition-all group"
           >
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 p-0.5 shadow-lg shadow-indigo-500/20">
               <div className="w-full h-full rounded-[10px] bg-slate-900 flex items-center justify-center overflow-hidden">
                 <img 
                   src={avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`} 
-                  alt="Avatar" 
+                  alt={`${username}'s avatar`} 
+                  loading="lazy"
                   className="w-full h-full object-cover"
                 />
               </div>

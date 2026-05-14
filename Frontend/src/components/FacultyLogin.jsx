@@ -7,8 +7,10 @@ import { authApi } from '../api';
 
 const FacultyLogin = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,6 +43,28 @@ const FacultyLogin = () => {
     }
   };
 
+  const handleReset = async (e) => {
+    e.preventDefault();
+    setResetLoading(true);
+    const facultyId = e.target.querySelector('input[name="facultyId"]').value;
+    const email = e.target.querySelector('input[name="email"]').value;
+    const newPassword = e.target.querySelector('input[name="newPassword"]').value;
+
+    try {
+      await authApi.passwordReset({
+        username: facultyId,
+        email: email,
+        new_password: newPassword
+      });
+      toast.success('Faculty password reset successfully!');
+      setIsResetMode(false);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Reset failed.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -66,38 +90,91 @@ const FacultyLogin = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="w-full max-w-[420px] bg-[#0d121d] border border-white/5 rounded-3xl p-10 shadow-2xl"
           >
-            <h2 className="text-2xl font-semibold text-white text-center mb-8">Faculty Login</h2>
+            <h2 className="text-2xl font-semibold text-white text-center mb-8">
+              {isResetMode ? 'Reset Faculty Password' : 'Faculty Login'}
+            </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <input 
-                type="text" 
-                required
-                placeholder="Faculty ID or Email"
-                className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
-              />
-              <div className="relative">
+            {!isResetMode ? (
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <input 
-                  type={showPassword ? "text" : "password"} 
+                  type="text" 
                   required
-                  placeholder="Password"
+                  placeholder="Faculty ID or Email"
                   className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
                 />
+                <div className="relative">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    required
+                    placeholder="Password"
+                    className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  >
+                    <Eye className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="text-right">
+                  <button 
+                    type="button"
+                    onClick={() => setIsResetMode(true)}
+                    className="text-xs text-slate-500 hover:text-blue-400 transition-colors"
+                  >
+                    Reset password
+                  </button>
+                </div>
+
+                <button 
+                  disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 uppercase tracking-wider transition-all disabled:opacity-50"
+                >
+                  {loading ? 'Verifying...' : 'Access Portal'}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleReset} className="space-y-5">
+                <input 
+                  name="facultyId"
+                  type="text" 
+                  required
+                  placeholder="Faculty ID / Username"
+                  className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                />
+                <input 
+                  name="email"
+                  type="email" 
+                  required
+                  placeholder="Registered Email"
+                  className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                />
+                <input 
+                  name="newPassword"
+                  type="password" 
+                  required
+                  placeholder="New Password"
+                  className="w-full bg-[#1b222f] border-none rounded-xl py-4 px-5 text-white placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                />
+
+                <button 
+                  disabled={resetLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all disabled:opacity-50"
+                >
+                  {resetLoading ? 'Resetting...' : 'Reset Password'}
+                </button>
+
                 <button 
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  onClick={() => setIsResetMode(false)}
+                  className="w-full text-slate-500 hover:text-white text-sm transition-colors"
                 >
-                  <Eye className="w-5 h-5" />
+                  Back to Login
                 </button>
-              </div>
-
-              <button 
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-500/20 uppercase tracking-wider transition-all disabled:opacity-50"
-              >
-                {loading ? 'Verifying...' : 'Access Portal'}
-              </button>
-            </form>
+              </form>
+            )}
 
             <div className="mt-8 pt-6 border-t border-white/5 text-center">
               <Link to="/" className="text-slate-500 hover:text-blue-400 text-sm transition-colors flex items-center justify-center gap-2">

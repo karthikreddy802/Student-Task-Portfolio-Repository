@@ -4,35 +4,43 @@ import json
 
 def generate_portfolio_content(student_name, submissions_data):
     """
-    Uses local Ollama AI to organize and enhance portfolio content.
+    Uses local Ollama AI to generate high-fidelity portfolio content including
+    summaries, skill extraction, highlights, and resume-style descriptions.
     """
     ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434/api/generate')
-    ollama_model = getattr(settings, 'OLLAMA_MODEL', 'llama3')
+    ollama_model = getattr(settings, 'OLLAMA_MODEL', 'gemma:2b') # Use Gemma 2B as requested
 
     prompt = f"""
-    You are an expert career coach and portfolio designer. 
-    A student named {student_name} is building their academic portfolio.
+    You are an elite career coach and tech recruiter. 
+    A student named {student_name} is building a high-fidelity academic portfolio.
     
-    Here is the data of their selected best works:
-    {json.dumps(submissions_data)}
+    Data: {json.dumps(submissions_data)}
     
     Tasks:
-    1. Generate a professional, compelling bio (2-3 sentences) for this student based on their projects.
-    2. For each project, provide a "professional_summary" (max 100 words) that enhances the student's original description.
-    3. Suggest 3 additional "industry_tags" for each project.
+    1. Bio: A 3-sentence powerful professional bio.
+    2. Skills: Extract a list of 8-10 technical and soft skills from the work.
+    3. Recommendations: Identify the 'Star Project' and explain why it stands out.
+    4. Feedback: Suggest 2 growth areas for the student's career path.
+    5. For each Project:
+       - 'resume_description': A professional, result-oriented description (action verbs).
+       - 'highlights': 3 bullet points of key technical achievements.
+       - 'tags': 3 industry-standard skill tags.
     
-    Return the response strictly in JSON format with the following structure:
+    Return ONLY JSON:
     {{
         "bio": "...",
+        "skills": ["...", "..."],
+        "recommendation": {{ "star_project_id": ID, "reason": "..." }},
+        "growth_feedback": ["...", "..."],
         "projects": [
             {{
-                "id": project_id,
-                "summary": "...",
-                "tags": ["tag1", "tag2", "tag3"]
+                "id": ID,
+                "resume_description": "...",
+                "highlights": ["...", "...", "..."],
+                "tags": ["...", "...", "..."]
             }}
         ]
     }}
-    Do not include any preamble or extra text, just the JSON.
     """
 
     try:
@@ -43,13 +51,12 @@ def generate_portfolio_content(student_name, submissions_data):
             "format": "json"
         }
         
-        response = requests.post(ollama_url, json=payload, timeout=60)
+        response = requests.post(ollama_url, json=payload, timeout=90) # Increased timeout for more complex prompt
         response.raise_for_status()
         
         result_data = response.json()
         content = result_data.get('response', '').strip()
         
-        # Remove potential markdown code blocks if the model included them
         if content.startswith('```json'):
             content = content[7:]
         if content.endswith('```'):
@@ -61,11 +68,15 @@ def generate_portfolio_content(student_name, submissions_data):
         print(f"Ollama AI Error: {e}")
         # Fallback to high-quality mock if Ollama fails
         return {
-            "bio": f"I am {student_name}, a dedicated student focused on technical excellence. This portfolio represents a curated selection of my most impactful projects.",
+            "bio": f"I am {student_name}, a dedicated student focused on technical excellence and academic growth.",
+            "skills": ["Problem Solving", "Technical Communication", "Research", "Project Management"],
+            "recommendation": { "star_project_id": submissions_data[0]['id'] if submissions_data else None, "reason": "Demonstrates core competencies and attention to detail." },
+            "growth_feedback": ["Explore more advanced frameworks", "Contribute to open source"],
             "projects": [
                 {
                     "id": s['id'],
-                    "summary": s['description'] or "Detailed project implementation.",
+                    "resume_description": s['description'] or "Detailed project implementation focused on efficiency.",
+                    "highlights": ["Implemented core functionality", "Optimized performance", "Collaborated on design"],
                     "tags": (s['tags'] or "Development").split(',')
                 } for s in submissions_data
             ]

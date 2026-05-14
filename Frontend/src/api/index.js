@@ -18,6 +18,7 @@ export const authApi = {
   login: (credentials) => api.post('/token/', credentials),
   register: (userData) => api.post('/register/', userData),
   refresh: (refresh) => api.post('/token/refresh/', { refresh }),
+  passwordReset: (data) => api.post('/password-reset/', data),
 };
 
 export const taskApi = {

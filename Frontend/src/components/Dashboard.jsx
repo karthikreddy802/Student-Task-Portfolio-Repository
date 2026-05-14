@@ -9,6 +9,7 @@ import {
   ArrowUpRight, TrendingUp, Filter 
 } from 'lucide-react';
 import { taskApi, submissionApi } from '../api';
+import SEO from './SEO';
 
 // Dynamic data calculated inside component
 
@@ -72,6 +73,10 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <SEO 
+        title="Student Dashboard" 
+        description="Track your academic progress, manage tasks, and view performance analytics on your HUB OS dashboard."
+      />
       <header className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Student Dashboard</h1>

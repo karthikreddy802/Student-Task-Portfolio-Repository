@@ -45,7 +45,9 @@ const NavItem = ({ path, icon: Icon, label, isOpen, active, badge, subItems }) =
           ${active 
             ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/20' 
             : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'}
-        `}>
+        `}
+        aria-current={active ? 'page' : undefined}
+        >
           <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-indigo-400' : 'group-hover:text-white'}`} />
           {isOpen && (
             <>
@@ -231,6 +233,7 @@ const Layout = ({ children }) => {
         {/* Toggle Button */}
         <button 
           onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           className="absolute -right-3 top-24 w-6 h-6 bg-slate-900 rounded-full flex items-center justify-center text-slate-400 hover:text-white border border-white/10 shadow-xl transition-all hover:scale-110"
         >
           {isOpen ? <X className="w-3 h-3" /> : <Menu className="w-3 h-3" />}

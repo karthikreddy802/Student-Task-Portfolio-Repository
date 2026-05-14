@@ -7,6 +7,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { portfolioApi } from '../api';
 import toast from 'react-hot-toast';
+import SEO from './SEO';
 
 const PortfolioPreview = () => {
   const { username } = useParams();
@@ -23,6 +24,8 @@ const PortfolioPreview = () => {
             title: res.data.title,
             bio: res.data.bio,
             avatar: res.data.effective_avatar,
+            skills: res.data.data.skills || [],
+            recommendation: res.data.data.recommendation || null,
             projects: res.data.data.projects || []
           });
         } catch (err) {
@@ -72,6 +75,10 @@ const PortfolioPreview = () => {
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-300 font-sans selection:bg-indigo-500/30">
+      <SEO 
+        title={`${data?.name}'s Academic Portfolio`} 
+        description={data?.bio || "View this student's curated academic projects and technical achievements."}
+      />
       {/* Decorative background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px]" />
@@ -123,15 +130,53 @@ const PortfolioPreview = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex justify-center gap-6"
+            className="flex flex-col items-center gap-6"
           >
-            {[Terminal, Globe, UserCircle, Mail].map((Icon, i) => (
-              <a key={i} href="#" className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 text-slate-400 hover:text-white">
-                <Icon className="w-6 h-6" />
-              </a>
-            ))}
+            <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
+              {data.skills?.map((skill, i) => (
+                <span key={i} className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-sm text-indigo-300 font-medium">
+                  {skill}
+                </span>
+              ))}
+            </div>
+            <div className="flex justify-center gap-6 mt-4">
+              {[Terminal, Globe, UserCircle, Mail].map((Icon, i) => (
+                <a key={i} href="#" className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 text-slate-400 hover:text-white">
+                  <Icon className="w-6 h-6" />
+                </a>
+              ))}
+            </div>
           </motion.div>
         </header>
+
+        {/* AI Insight: Star Project */}
+        {data.recommendation && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mb-24 p-8 rounded-[32px] bg-gradient-to-br from-indigo-600/20 to-transparent border border-indigo-500/30 relative overflow-hidden group"
+          >
+            <div className="absolute top-0 right-0 p-6">
+              <Sparkles className="w-12 h-12 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors" />
+            </div>
+            <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
+              <div className="p-4 bg-indigo-500/20 rounded-2xl shrink-0">
+                <Award className="w-10 h-10 text-amber-400" />
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-2xl font-bold text-white">Recommended Best Work</h3>
+                <p className="text-slate-300 text-lg italic">
+                  "The standout piece in this collection is <strong>{
+                    data.projects.find(p => p.id === data.recommendation.star_project_id)?.title || 'Selected Project'
+                  }</strong>."
+                </p>
+                <p className="text-slate-400 leading-relaxed max-w-3xl">
+                  {data.recommendation.reason}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Featured Projects */}
         <section className="space-y-12">
@@ -162,25 +207,36 @@ const PortfolioPreview = () => {
                 <h3 className="text-2xl font-bold text-white mb-3 group-hover:text-indigo-400 transition-colors">
                   {project.title}
                 </h3>
-                <p className="text-slate-400 leading-relaxed mb-6">
+                <p className="text-slate-400 leading-relaxed mb-6 italic border-l-2 border-indigo-500/30 pl-4">
                   {project.description}
                 </p>
 
+                {project.highlights && project.highlights.length > 0 && (
+                  <div className="mb-6 space-y-2">
+                    {project.highlights.map((h, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-sm text-slate-500">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                        {h}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2 mb-8">
                   {project.tags.map(tag => (
-                    <span key={tag} className="px-3 py-1 bg-slate-800/50 text-slate-400 rounded-lg text-xs font-semibold">
+                    <span key={tag} className="px-3 py-1 bg-slate-800/50 text-slate-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-white/5">
                       {tag}
                     </span>
                   ))}
                 </div>
 
                 <a 
-                  href={project.file ? `http://localhost:8000${project.file}` : (project.link || '#')} 
+                  href={project.file ? (project.file.startsWith('http') ? project.file : `http://localhost:8000${project.file}`) : (project.link || '#')} 
                   target="_blank" 
                   rel="noopener noreferrer" 
                   className="inline-flex items-center gap-2 text-white font-bold group-hover:gap-3 transition-all"
                 >
-                  View Full Case Study <ExternalLink className="w-4 h-4 text-indigo-500" />
+                  View Case Study <ExternalLink className="w-4 h-4 text-indigo-500" />
                 </a>
               </motion.div>
             ))}
