@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     TaskViewSet, SubmissionViewSet, ProfileViewSet, NotificationViewSet, 
-    PortfolioViewSet, RegisterView, GeneratePortfolioView, PublicPortfolioView,
+    PortfolioViewSet, UserViewSet, RegisterView, GeneratePortfolioView, PublicPortfolioView,
     SuggestTaskDescriptionView
 )
 
@@ -12,6 +12,7 @@ router.register(r'submissions', SubmissionViewSet)
 router.register(r'profiles', ProfileViewSet)
 router.register(r'notifications', NotificationViewSet)
 router.register(r'portfolios', PortfolioViewSet)
+router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

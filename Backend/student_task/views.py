@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from .models import Profile, Task, Submission, Notification, Portfolio
 from .serializers import (
     MyTokenObtainPairSerializer, ProfileSerializer, TaskSerializer, 
-    SubmissionSerializer, NotificationSerializer, PortfolioSerializer
+    SubmissionSerializer, NotificationSerializer, PortfolioSerializer, UserSerializer
 )
 from .ai_service import generate_portfolio_content, suggest_task_description
 from django.http import HttpResponse
@@ -96,6 +96,11 @@ class NotificationViewSet(viewsets.ModelViewSet):
 class ProfileViewSet(viewsets.ModelViewSet):
     queryset = Profile.objects.all()
     serializer_class = ProfileSerializer
+    permission_classes = [permissions.AllowAny]
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all().order_by('-id')
+    serializer_class = UserSerializer
     permission_classes = [permissions.AllowAny]
 
 class RegisterView(APIView):

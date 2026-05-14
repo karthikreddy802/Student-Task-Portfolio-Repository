@@ -72,4 +72,11 @@ export const notificationApi = {
   markAsRead: (id) => api.patch(`/notifications/${id}/`, { is_read: true }),
 };
 
+export const userApi = {
+  getAll: () => api.get('/users/'),
+  getById: (id) => api.get(`/users/${id}/`),
+  update: (id, data) => api.patch(`/users/${id}/`, data),
+  delete: (id) => api.delete(`/users/${id}/`),
+};
+
 export default api;
